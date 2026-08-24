@@ -1,39 +1,36 @@
-const sql = require('mssql/msnodesqlv8');
+const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-const config = {
-  connectionString: 
-    `Driver={SQL Server Native Client 11.0};` +
-    `Server=${process.env.DB_SERVER};` +
-    `Database=${process.env.DB_NAME};` +
-    `Trusted_Connection=yes;`
-};
-
-const pool        = new sql.ConnectionPool(config);
-const poolConnect = pool.connect();
-
-pool.on('error', err => {
-  console.error('❌ خطأ في قاعدة البيانات:', err.message);
+// إنشاء حوض اتصالات (Pool) يتوافق مع Aiven وVercel
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT || 14775,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  ssl: {
+    rejectUnauthorized: false // إجباري لاتصال Aiven الآمن
+  },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-poolConnect
-  .then(() => console.log('✅ تم الاتصال بـ SQL Server (Windows Auth)'))
-  .catch(err => {
-    console.error('❌ فشل الاتصال:', err.message);
-  });
-
-async function query(queryStr, params = {}) {
-  await poolConnect;
-  const request = pool.request();
-  for (const [key, val] of Object.entries(params)) {
-    request.input(key, val);
+// دالة تنفيذ الاستعلامات
+async function query(sqlText, params = []) {
+  try {
+    const [rows] = await pool.execute(sqlText, Array.isArray(params) ? params : Object.values(params));
+    return { recordset: rows };
+  } catch (err) {
+    console.error('❌ خطأ في الاستعلام:', err.message);
+    throw err;
   }
-  return request.query(queryStr);
 }
 
-async function queryOne(queryStr, params = {}) {
-  const result = await query(queryStr, params);
+// دالة جلب عنصر واحد
+async function queryOne(sqlText, params = []) {
+  const result = await query(sqlText, params);
   return result.recordset[0] || null;
 }
 
-module.exports = { pool, poolConnect, query, queryOne, sql };
+module.exports = { pool, query, queryOne };
