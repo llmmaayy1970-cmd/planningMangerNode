@@ -46,3 +46,5 @@ app.listen(PORT, () => {
     console.log(`📈 التقارير: http://localhost:${PORT}/reports.html`);
     console.log(`🔌 API: http://localhost:${PORT}/api\n`);
 });
+// أضف هذا السطر في نهاية الملف بالكامل
+module.exports = app;
