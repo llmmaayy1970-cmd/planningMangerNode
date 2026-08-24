@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام متابعة المشاريع</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- صفحة تسجيل الدخول -->
+<div id="loginPage" class="page active">
+  <div class="login-bg">
+    <div class="login-grid"></div>
+  </div>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">📋</div>
+        <h1>نظام متابعة المشاريع</h1>
+        <p>منصة إدارة ومتابعة المشاريع</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <div class="form-group">
+          <label>اسم المستخدم</label>
+          <input type="text" id="loginUsername" placeholder="أدخل اسم المستخدم" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور</label>
+          <input type="password" id="loginPassword" placeholder="أدخل كلمة المرور" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" id="loginBtn">
+          <span>تسجيل الدخول</span>
+        </button>
+        <div id="loginError" class="error-msg hidden"></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- التطبيق الرئيسي -->
+<div id="appPage" class="page hidden">
+
+  <!-- الشريط العلوي -->
+  <header class="topbar" id="topbar">
+    <div class="topbar-right">
+        <div class="app-brand">
+            <span class="brand-icon">📊</span>
+            <span class="brand-name">متابعة المشاريع</span>
+        </div>
+    </div>
+    <nav class="topbar-nav" id="topNav">
+        <!-- سيتم ملؤه بواسطة JavaScript -->
+    </nav>
+    <div class="topbar-left">
+        <!--  <button class="nav-btn" id="reportBtn" onclick="window.location.href='/reports'" style="color: var(--info); font-weight: 600;">
+            📊 التقارير
+        </button>-->
+        <div class="user-badge">
+            <span class="user-name" id="currentUserName">المستخدم</span>
+            <span class="user-role" id="currentUserRole">مستخدم</span>
+        </div>
+        <button class="btn-icon" id="logoutBtn" title="تسجيل الخروج">🚪</button>
+    </div>
+</header>
+
+  <!-- المحتوى الرئيسي -->
+  <main class="main-content">
+
+    <!-- لوحة التحكم -->
+    <section id="dashboardSection" class="section">
+      <div class="section-header">
+        <h2>لوحة التحكم</h2>
+        <span class="section-date" id="todayDate"></span>
+      </div>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card" data-color="blue">
+          <div class="stat-icon">📁</div>
+          <div class="stat-info"><span class="stat-num" id="statTotal">-</span><span class="stat-label">إجمالي المشاريع</span></div>
+        </div>
+        <div class="stat-card" data-color="green">
+          <div class="stat-icon">🔄</div>
+          <div class="stat-info"><span class="stat-num" id="statOngoing">-</span><span class="stat-label">مستمر</span></div>
+        </div>
+        <div class="stat-card" data-color="orange">
+          <div class="stat-icon">🆕</div>
+          <div class="stat-info"><span class="stat-num" id="statNew">-</span><span class="stat-label">جديد</span></div>
+        </div>
+        <div class="stat-card" data-color="red">
+          <div class="stat-icon">⏸</div>
+          <div class="stat-info"><span class="stat-num" id="statStopped">-</span><span class="stat-label">متوقف</span></div>
+        </div>
+        <div class="stat-card" data-color="teal">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info"><span class="stat-num" id="statDone">-</span><span class="stat-label">منجز</span></div>
+        </div>
+        <div class="stat-card" data-color="purple">
+          <div class="stat-icon">✉️</div>
+          <div class="stat-info"><span class="stat-num" id="statMsgs">-</span><span class="stat-label">رسائل غير مقروءة</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- قائمة المشاريع -->
+    <section id="projectsSection" class="section">
+      <div class="section-header">
+        <h2 id="projectsTitle">المشاريع</h2>
+        <div class="header-actions">
+          <input type="text" id="searchInput" class="search-input" placeholder="🔍 بحث...">
+          <select id="filterStatus" class="filter-select">
+            <option value="">كل الحالات</option>
+            <option value="جديد">جديد</option>
+            <option value="مستمر">مستمر</option>
+            <option value="متوقف">متوقف</option>
+            <option value="منجز">منجز</option>
+          </select>
+      <button class="btn btn-primary" id="addProjectBtn" style="display:none" onclick="openProjectModal(null)">+ مشروع جديد</button>  </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="projectsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>اسم المشروع</th>
+              <th>الجهة المنفذة</th>
+              <th>جهة التكليف</th>
+              <th>تاريخ البدء</th>
+              <th>المكلف بالمتابعة</th>
+              <th>الحالة</th>
+              <th>الرسائل</th>
+              <th>إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="projectsBody">
+            <tr><td colspan="9" class="loading-row">جارٍ التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- إدارة المستخدمين (مدير فقط) -->
+    <section id="usersSection" class="section hidden">
+      <div class="section-header">
+        <h2>إدارة المستخدمين</h2>
+        <button class="btn btn-primary" id="addUserBtn">+ مستخدم جديد</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="usersTable">
+          <thead>
+            <tr><th>#</th><th>اسم المستخدم</th><th>الاسم الكامل</th><th>الصلاحية</th><th>إجراء</th></tr>
+          </thead>
+          <tbody id="usersBody">
+            <tr><td colspan="5" class="loading-row">جارٍ التحميل...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+ 
+    <!-- ===== قسم التقارير ===== -->
+    <section id="reportsSection" class="section hidden">
+       <!-- <div class="section-header">
+            <h2>📊 التقارير المتقدمة</h2>
+            <span class="section-date" id="reportDate"></span>
+        </div>-->
+        
+        <!-- فلتر التقارير -->
+        <div class="report-filters" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px;">
+            <div class="filter-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+                <div class="filter-group" style="display:flex;flex-direction:column;">
+                    <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:4px;">🏷️ اسم المشروع</label>
+                    <select id="filterProjectName" style="padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:.88rem;outline:none;">
+                        <option value="">-- جميع المشاريع --</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="display:flex;flex-direction:column;">
+                    <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:4px;">👤 المكلف</label>
+                    <select id="filterAssignedUser" style="padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:.88rem;outline:none;">
+                        <option value="">-- جميع المكلفين --</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="display:flex;flex-direction:column;">
+                    <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:4px;">📌 الحالة</label>
+                   <select id="reportFilterStatus" style="padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:.88rem;outline:none;">                        <option value="">-- جميع الحالات --</option>
+                        <option value="جديد">جديد</option>
+                        <option value="مستمر">مستمر</option>
+                        <option value="متوقف">متوقف</option>
+                        <option value="منجز">منجز</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="display:flex;flex-direction:column;">
+                    <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:4px;">📅 من تاريخ</label>
+                    <input type="date" id="filterDateFrom" style="padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:.88rem;outline:none;" />
+                </div>
+                <div class="filter-group" style="display:flex;flex-direction:column;">
+                    <label style="font-size:.82rem;font-weight:600;color:var(--text-muted);margin-bottom:4px;">📅 إلى تاريخ</label>
+                    <input type="date" id="filterDateTo" style="padding:8px 12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font);font-size:.88rem;outline:none;" />
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="generateReport()">🔍 عرض التقرير</button>
+                <button class="btn btn-ghost" onclick="resetFilters()">🔄 إعادة تعيين</button>
+             <!-- ===== إضافة زر الطباعة ===== -->
+        <button class="btn btn-success" onclick="printReport()" id="printReportBtn" style="display:none;">
+            🖨️ طباعة / PDF
+        </button>
+      </div>
+        </div>
+
+        <!-- نتائج التقرير -->
+        <div class="report-results" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;">
+            <div class="report-header" style="padding:16px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <h3 style="font-size:1.05rem;font-weight:700;color:var(--text);">نتائج التقرير</h3>
+                <span class="report-count" id="reportCount" style="color:var(--text-muted);font-size:.85rem;">0 مشروع</span>
+            </div>
+            <div id="reportBody">
+                <div class="no-results" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+                    <span style="font-size:3rem;display:block;margin-bottom:12px;">📋</span>
+                    اختر الفلاتر ثم اضغط "عرض التقرير"
+                </div>
+            </div>
+        </div>
+    </section>
+  </main>
+</div>
+
+<!-- مودال المشروع -->
+<div id="projectModal" class="modal hidden">
+  <div class="modal-backdrop" id="projectModalBd"></div>
+  <div class="modal-panel" id="projectModalPanel">
+    <div class="modal-header">
+      <h3 id="projectModalTitle">تفاصيل المشروع</h3>
+      <button class="modal-close" id="closeProjectModal">✕</button>
+    </div>
+    <div class="modal-body" id="projectModalBody">
+      <!-- يعبأ ديناميكياً -->
+    </div>
+  </div>
+</div>
+
+<!-- مودال المستخدم -->
+<div id="userModal" class="modal hidden">
+  <div class="modal-backdrop" id="userModalBd"></div>
+  <div class="modal-panel modal-sm">
+    <div class="modal-header">
+      <h3 id="userModalTitle">مستخدم جديد</h3>
+      <button class="modal-close" id="closeUserModal">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="userForm">
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+          <label>اسم المستخدم (للدخول)</label>
+          <input type="text" id="uUsername" required>
+        </div>
+        <div class="form-group">
+          <label>الاسم الكامل</label>
+          <input type="text" id="uFullname" required>
+        </div>
+        <div class="form-group">
+          <label>كلمة المرور <small id="uPwdHint">(اتركها فارغة للإبقاء على الحالية)</small></label>
+          <input type="password" id="uPassword">
+        </div>
+        <div class="form-group">
+          <label>الصلاحية</label>
+          <select id="uStatus">
+            <option value="User">مستخدم عادي</option>
+            <option value="Admin">مدير</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">حفظ</button>
+          <button type="button" class="btn btn-ghost" id="cancelUserModal">إلغاء</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast للإشعارات -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

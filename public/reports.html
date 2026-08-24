@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>التقارير - نظام متابعة المشاريع</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css" />
+    <style>
+        /* أنماط التقرير (كما هي) */
+        .report-page { min-height: 100vh; background: var(--bg); }
+        .report-container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        .report-filters { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label { font-size: .82rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+        .filter-group input, .filter-group select { padding: 8px 12px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--font); font-size: .88rem; outline: none; transition: var(--transition); }
+        .filter-group input:focus, .filter-group select:focus { border-color: var(--info); box-shadow: 0 0 0 3px #4dabf722; }
+        .filter-actions { display: flex; gap: 10px; align-items: flex-end; padding-top: 6px; flex-wrap: wrap; }
+        .filter-actions .btn { height: 40px; }
+        .report-results { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+        .report-header { padding: 16px 20px; background: var(--surface2); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .report-header h3 { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+        .report-header .report-count { color: var(--text-muted); font-size: .85rem; }
+        .report-item { border-bottom: 1px solid var(--border); padding: 16px 20px; transition: var(--transition); }
+        .report-item:last-child { border-bottom: none; }
+        .report-item:hover { background: var(--surface2); }
+        .report-item-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+        .report-item-title { font-weight: 700; font-size: 1rem; color: var(--text); }
+        .report-item-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: .82rem; color: var(--text-muted); }
+        .report-item-meta span { display: flex; align-items: center; gap: 4px; }
+        .report-item-details { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: none; }
+        .report-item-details.expanded { display: block; }
+        .report-item-details .detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px 20px; font-size: .88rem; }
+        .report-item-details .detail-grid .detail-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border); }
+        .report-item-details .detail-grid .detail-item .label { color: var(--text-muted); font-weight: 500; }
+        .report-item-details .detail-grid .detail-item .value { color: var(--text); font-weight: 500; }
+        .report-item-details .notes-section { margin-top: 12px; padding: 12px; background: var(--surface2); border-radius: var(--radius); max-height: 200px; overflow-y: auto; }
+        .report-item-details .notes-section .note-item { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: .85rem; }
+        .report-item-details .notes-section .note-item:last-child { border-bottom: none; }
+        .report-item-details .notes-section .note-meta { font-size: .75rem; color: var(--text-muted); }
+        .no-results { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+        .no-results .icon { font-size: 3rem; display: block; margin-bottom: 12px; }
+        .expand-toggle { background: none; border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; font-size: .82rem; font-weight: 600; padding: 4px 12px; border-radius: var(--radius); transition: var(--transition); }
+        .expand-toggle:hover { border-color: var(--info); color: var(--info); }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--text-muted); text-decoration: none; font-size: .9rem; padding: 6px 12px; border-radius: var(--radius); transition: var(--transition); }
+        .back-link:hover { background: var(--surface2); color: var(--text); }
+        .topbar-simple { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .topbar-simple .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: var(--text); }
+        .topbar-simple .brand .icon { font-size: 1.3rem; }
+        .topbar-simple .user-info { display: flex; align-items: center; gap: 12px; font-size: .9rem; }
+        .topbar-simple .user-info .name { font-weight: 600; }
+        .topbar-simple .user-info .role { color: var(--text-muted); font-size: .78rem; }
+        @media (max-width: 768px) { .filter-grid { grid-template-columns: 1fr; } .report-item-details .detail-grid { grid-template-columns: 1fr; } .report-item-header { flex-direction: column; } .report-container { padding: 12px; } }
+    </style>
+</head>
+<body>
+
+<div class="report-page">
+    <!-- شريط علوي بسيط -->
+    <div class="topbar-simple">
+        <div class="brand">
+            <span class="icon">📊</span>
+            <span>نظام متابعة المشاريع - التقارير</span>
+            <a href="/" class="back-link">🏠 العودة للرئيسية</a>
+        </div>
+        <div class="user-info" id="userInfo">
+            <div>
+                <div class="name" id="headerUserName">المستخدم</div>
+                <div class="role" id="headerUserRole">مستخدم</div>
+            </div>
+            <button class="btn btn-sm btn-danger" onclick="handleLogout()">تسجيل خروج</button>
+        </div>
+    </div>
+
+    <div class="report-container">
+        <!-- عنوان الصفحة -->
+        <div class="section-header">
+            <h2>📊 التقارير المتقدمة</h2>
+            <span class="section-date" id="reportDate"></span>
+        </div>
+
+        <!-- فلتر التقارير -->
+        <div class="report-filters">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label>🏷️ اسم المشروع</label>
+                    <select id="reportFilterProjectName">
+                        <option value="">-- جميع المشاريع --</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>👤 المكلف</label>
+                    <select id="reportFilterAssignedUser">
+                        <option value="">-- جميع المكلفين --</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>📌 الحالة</label>
+                    <select id="reportFilterStatus">
+                        <option value="">-- جميع الحالات --</option>
+                        <option value="جديد">جديد</option>
+                        <option value="مستمر">مستمر</option>
+                        <option value="متوقف">متوقف</option>
+                        <option value="منجز">منجز</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>📅 من تاريخ</label>
+                    <input type="date" id="reportFilterDateFrom" />
+                </div>
+                <div class="filter-group">
+                    <label>📅 إلى تاريخ</label>
+                    <input type="date" id="reportFilterDateTo" />
+                </div>
+            </div>
+            <div class="filter-actions" style="margin-top:16px;">
+                <button class="btn btn-primary" onclick="generateReport()">🔍 عرض التقرير</button>
+                <button class="btn btn-ghost" onclick="resetFilters()">🔄 إعادة تعيين</button>
+             <button class="btn btn-success" onclick="printReport()" id="printReportBtn" style="display:none;">
+        🖨️ طباعة / PDF
+    </button>
+</div>
+        </div>
+
+        <!-- نتائج التقرير -->
+        <div class="report-results" id="reportResults">
+            <div class="report-header">
+                <h3>نتائج التقرير</h3>
+                <span class="report-count" id="reportCount">0 مشروع</span>
+            </div>
+            <div id="reportBody">
+                <div class="no-results">
+                    <span class="icon">📋</span>
+                    اختر الفلاتر ثم اضغط "عرض التقرير"
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== Toast ====== -->
+<div id="toast" class="toast hidden"></div>
+
+<script>
+// =============================================
+// المتغيرات العامة
+// =============================================
+const API_BASE = '/api';
+let currentUser = null;
+let allProjects = [];
+let allUsers = [];
+let reportData = [];
+
+// =============================================
+// دوال مساعدة API
+// =============================================
+const api = {
+    token: localStorage.getItem('pm_token'),
+
+    setToken(t) {
+        this.token = t;
+        if (t) localStorage.setItem('pm_token', t);
+        else localStorage.removeItem('pm_token');
+    },
+
+    async request(method, endpoint, data = null) {
+        const opts = {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.token ? { 'Authorization': 'Bearer ' + this.token } : {})
+            }
+        };
+        if (data && method !== 'GET') opts.body = JSON.stringify(data);
+
+        const res = await fetch(API_BASE + endpoint, opts);
+        const json = await res.json();
+
+        if (res.status === 403 && json.message?.includes('منتهية')) {
+            this.setToken(null);
+            window.location.href = '/';
+        }
+        return json;
+    },
+
+    get: (ep) => this.request('GET', ep),
+    post: (ep, data) => this.request('POST', ep, data),
+
+    login: (u, p) => api.post('/auth/login', { username: u, password: p }),
+    getProjects: () => api.get('/projects'),
+    getUsers: () => api.get('/auth/users'),
+    getDescriptions: (pid) => api.get(`/projects/${pid}/descriptions`),
+};
+
+// =============================================
+// دوال رئيسية
+// =============================================
+document.addEventListener('DOMContentLoaded', () => {
+    // تاريخ اليوم
+    document.getElementById('reportDate').textContent = new Date().toLocaleDateString('ar-IQ', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+
+    // التحقق من تسجيل الدخول
+    const saved = localStorage.getItem('pm_user');
+    const token = localStorage.getItem('pm_token');
+
+    if (saved && token) {
+        try {
+            currentUser = JSON.parse(saved);
+            api.setToken(token);
+            updateUserInfo();
+            loadDataAndPopulateFilters();
+        } catch (e) {
+            window.location.href = '/';
+        }
+    } else {
+        window.location.href = '/';
+    }
+});
+
+// ---- تحديث معلومات المستخدم ----
+function updateUserInfo() {
+    if (currentUser) {
+        document.getElementById('headerUserName').textContent = currentUser.full_name || 'مستخدم';
+        document.getElementById('headerUserRole').textContent = currentUser.status === 'Admin' ? 'مدير النظام' : 'مستخدم';
+    }
+}
+
+// ---- تعبئة فلاتر التقارير ----
+function populateReportFilters() {
+    console.log('🔄 جاري تعبئة الفلاتر...');
+
+    // فلتر أسماء المشاريع
+    const projectSelect = document.getElementById('reportFilterProjectName');
+    if (projectSelect) {
+        projectSelect.innerHTML = '<option value="">-- جميع المشاريع --</option>';
+        allProjects.forEach(p => {
+            if (p.project_name) {
+                projectSelect.innerHTML += `<option value="${esc(p.project_name)}">${esc(p.project_name)}</option>`;
+            }
+        });
+        console.log('✅ تم تعبئة فلتر المشاريع بـ ' + allProjects.length + ' مشروع');
+    }
+
+    // فلتر المكلفين
+    const userSelect = document.getElementById('reportFilterAssignedUser');
+    if (userSelect) {
+        userSelect.innerHTML = '<option value="">-- جميع المكلفين --</option>';
+        allUsers.forEach(u => {
+            if (u.full_name) {
+                userSelect.innerHTML += `<option value="${esc(u.full_name)}">${esc(u.full_name)}</option>`;
+            }
+        });
+        console.log('✅ تم تعبئة فلتر المكلفين بـ ' + allUsers.length + ' مستخدم');
+    }
+}
+
+// ---- تحميل البيانات وتعبئة الفلاتر ----
+async function loadDataAndPopulateFilters() {
+    try {
+        console.log('⏳ جاري تحميل البيانات...');
+        const [projectsRes, usersRes] = await Promise.all([
+            api.getProjects(),
+            api.getUsers()
+        ]);
+
+        if (projectsRes.success) {
+            allProjects = projectsRes.data || [];
+            console.log('✅ تم تحميل ' + allProjects.length + ' مشروع');
+        }
+
+        if (usersRes.success) {
+            allUsers = usersRes.data || [];
+            console.log('✅ تم تحميل ' + allUsers.length + ' مستخدم');
+        }
+
+        populateReportFilters();
+
+    } catch (err) {
+        console.error('❌ خطأ:', err);
+        showToast('خطأ في تحميل البيانات', 'error');
+    }
+}
+
+// ---- تسجيل الخروج ----
+function handleLogout() {
+    api.setToken(null);
+    localStorage.removeItem('pm_user');
+    window.location.href = '/';
+}
+/*
+// ---- عرض التقرير ----
+async function generateReport() {
+    const projectName = document.getElementById('reportFilterProjectName').value;
+    const assignedUser = document.getElementById('reportFilterAssignedUser').value;
+    const status = document.getElementById('reportFilterStatus').value;
+    const dateFrom = document.getElementById('reportFilterDateFrom').value;
+    const dateTo = document.getElementById('reportFilterDateTo').value;
+
+    let filtered = [...allProjects];
+
+    if (projectName) {
+        filtered = filtered.filter(p => p.project_name === projectName);
+    }
+    if (assignedUser) {
+        filtered = filtered.filter(p => p.assigned_user_name === assignedUser);
+    }
+    if (status) {
+        filtered = filtered.filter(p => p.status === status);
+    }
+    if (dateFrom) {
+        filtered = filtered.filter(p => p.start_date && p.start_date >= dateFrom);
+    }
+    if (dateTo) {
+        filtered = filtered.filter(p => p.start_date && p.start_date <= dateTo);
+    }
+
+    for (const p of filtered) {
+        try {
+            const descRes = await api.getDescriptions(p.id);
+            p.descriptions = descRes.success ? descRes.data : [];
+        } catch (e) {
+            p.descriptions = [];
+        }
+    }
+
+    reportData = filtered;
+    renderReport(filtered);
+}
+
+// ---- عرض نتائج التقرير ----
+// ---- عرض نتائج التقرير ----
+function renderReport(projects, isSingle = false) {
+    const body = document.getElementById('reportBody');
+    const count = document.getElementById('reportCount');
+
+    if (!projects || !projects.length) {
+        body.innerHTML = `<div class="no-results" style="text-align:center;padding:48px 20px;color:var(--text-muted);">
+            <span style="font-size:3rem;display:block;margin-bottom:12px;">📋</span>
+            لا توجد مشاريع تطابق الفلاتر المحددة
+        </div>`;
+        count.textContent = '0 مشروع';
+        updatePrintButton(false);
+        return;
+    }
+
+    count.textContent = `${projects.length} مشروع`;
+    updatePrintButton(true);
+
+    let html = '';
+
+    if (isSingle) {
+        const p = projects[0];
+        html += renderSingleProjectReport(p);
+    } else {
+        html += renderMultipleProjectsReport(projects);
+    }
+
+    body.innerHTML = html;
+}
+
+// ---- تقرير مفرد (مشروع واحد) ----
+function renderSingleProjectReport(p) {
+    const descs = p.descriptions || [];
+    
+    let durationText = '';
+    if (p.start_date && p.completion_date) {
+        const start = new Date(p.start_date);
+        const end = new Date(p.completion_date);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        durationText = `${diffDays} يوم`;
+    } else if (p.duration_months) {
+        durationText = `${p.duration_months} شهر`;
+    } else {
+        durationText = '-';
+    }
+    
+    let html = `
+        <div class="report-single" style="direction:rtl;font-family:'Tajawal',sans-serif;padding:15px;background:#fff;border-radius:8px;margin:0;">
+            <div style="text-align:center;border-bottom:2px solid #1a1a2e;padding-bottom:12px;margin-bottom:15px;">
+                <h1 style="font-size:22px;font-weight:700;color:#1a1a2e;margin:0;">نظام المتابعة المركزية</h1>
+            </div>
+            
+            <div style="border:2px solid #1a1a2e;border-radius:8px;padding:15px;margin-bottom:15px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px 20px;font-size:13px;">
+                    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #eee;">
+                        <span style="font-weight:700;color:#1a1a2e;min-width:100px;">اسم المشروع :</span>
+                        <span style="font-weight:500;color:#333;">${esc(p.project_name)}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #eee;">
+                        <span style="font-weight:700;color:#1a1a2e;min-width:100px;">جهة التكليف :</span>
+                        <span style="font-weight:500;color:#333;">${esc(p.commissioning_party || '-')}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #eee;">
+                        <span style="font-weight:700;color:#1a1a2e;min-width:100px;">جهة التنفيذ :</span>
+                        <span style="font-weight:500;color:#333;">${esc(p.implementing_party || '-')}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #eee;">
+                        <span style="font-weight:700;color:#1a1a2e;min-width:100px;">تاريخ بدء المشروع :</span>
+                        <span style="font-weight:500;color:#333;">${p.start_date ? p.start_date.slice(0,10) : '-'}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #eee;">
+                        <span style="font-weight:700;color:#1a1a2e;min-width:100px;">نوع المشروع :</span>
+                        <span style="font-weight:500;color:#333;">${esc(p.urgency || 'عادي')}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid #eee;">
+                        <span style="font-weight:700;color:#1a1a2e;min-width:100px;">مدة الإنجاز :</span>
+                        <span style="font-weight:500;color:#333;">${durationText}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px 15px;font-size:12px;padding:10px 14px;background:#f8f9fa;border-radius:6px;margin-bottom:15px;border:1px solid #eee;">
+                <div><span style="font-weight:600;color:#555;">الحالة:</span> ${statusBadge(p.status)}</div>
+                <div><span style="font-weight:600;color:#555;">المكلف:</span> ${esc(p.assigned_user_name || '-')}</div>
+                <div><span style="font-weight:600;color:#555;">تاريخ الإنجاز:</span> ${p.completion_date ? p.completion_date.slice(0,10) : '-'}</div>
+                <div><span style="font-weight:600;color:#555;">رقم الوارد:</span> ${esc(p.ward_number || '-')}</div>
+                <div><span style="font-weight:600;color:#555;">تاريخ الوارد:</span> ${p.ward_date ? p.ward_date.slice(0,10) : '-'}</div>
+                <div><span style="font-weight:600;color:#555;">جهة الوارد:</span> ${esc(p.ward_source || '-')}</div>
+                <div><span style="font-weight:600;color:#555;">رقم الكتاب:</span> ${esc(p.book_number || '-')}</div>
+                <div><span style="font-weight:600;color:#555;">تاريخ الكتاب:</span> ${p.book_date ? p.book_date.slice(0,10) : '-'}</div>
+            </div>
+            
+            <div style="border:2px solid #1a1a2e;border-radius:8px;overflow:hidden;">
+                <table style="width:100%;border-collapse:collapse;font-size:12px;">
+                    <thead>
+                        <tr style="background:#1a1a2e;color:#fff;">
+                            <th style="padding:8px 14px;text-align:center;font-weight:700;width:25%;">تاريخ الوصف</th>
+                            <th style="padding:8px 14px;text-align:center;font-weight:700;width:75%;">الوصف</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${descs.length ? descs.map((d, index) => `
+                            <tr style="border-bottom:1px solid #ddd;${index % 2 === 0 ? 'background:#fff;' : 'background:#f8f9fa;'}">
+                                <td style="padding:8px 14px;text-align:center;vertical-align:middle;font-weight:500;color:#333;">${d.entry_date ? new Date(d.entry_date).toLocaleString('ar-IQ') : ''}</td>
+                                <td style="padding:8px 14px;vertical-align:middle;line-height:1.6;color:#333;text-align:right;">${esc(d.description)}</td>
+                            </tr>
+                        `).join('') : `
+                            <tr>
+                                <td colspan="2" style="padding:25px;text-align:center;color:#999;">لا توجد ملاحظات أو وصف لهذا المشروع</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="text-align:center;margin-top:15px;padding-top:10px;border-top:1px solid #ddd;font-size:10px;color:#999;">
+                تم إنشاء هذا التقرير بواسطة نظام المتابعة المركزية - ${new Date().toLocaleDateString('ar-IQ', {year:'numeric', month:'long', day:'numeric'})}
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+// ---- تقرير شامل (جميع المشاريع) ----
+function renderMultipleProjectsReport(projects) {
+    let html = `
+        <div style="padding:10px;margin:0;background:#fff;">
+            <div style="text-align:center;border-bottom:2px solid #1a1a2e;padding-bottom:10px;margin-bottom:15px;">
+                <h1 style="font-size:20px;font-weight:700;color:#1a1a2e;margin:0;">نظام المتابعة المركزية - تقرير شامل</h1>
+                <div style="font-size:12px;color:#666;margin-top:4px;">${new Date().toLocaleDateString('ar-IQ', {year:'numeric', month:'long', day:'numeric'})}</div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:11px;border:1px solid #ddd;">
+                    <thead>
+                        <tr style="background:#1a1a2e;color:#fff;">
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">#</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">اسم المشروع</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">جهة التكليف</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">الجهة المنفذة</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">فترة الإنجاز</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">تاريخ البدء</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">الوصف / الملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    projects.forEach((p, index) => {
+        const descs = p.descriptions || [];
+        descs.sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date));
+        
+        let notesText = '';
+        if (descs.length) {
+            notesText = descs.map(d => 
+                `${esc(d.description)}<br><span style="color:#888;font-size:10px;">📅 ${d.entry_date ? new Date(d.entry_date).toLocaleString('ar-IQ') : ''}</span>`
+            ).join('<br><br>');
+        } else {
+            notesText = '<span style="color:#999;font-size:11px;">لا توجد ملاحظات</span>';
+        }
+
+        let period = '-';
+        if (p.start_date && p.completion_date) {
+            const start = new Date(p.start_date);
+            const end = new Date(p.completion_date);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            period = `${diffDays} يوم`;
+        } else if (p.duration_months) {
+            period = `${p.duration_months} شهر`;
+        }
+
+        html += `
+            <tr style="border-bottom:1px solid #ddd;${index % 2 === 0 ? 'background:#fff;' : 'background:#f9f9f9;'}">
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${index + 1}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;font-weight:600;">${esc(p.project_name)}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${esc(p.commissioning_party || '-')}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${esc(p.implementing_party || '-')}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${period}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${p.start_date ? p.start_date.slice(0,10) : '-'}</td>
+                <td style="padding:6px 10px;border:1px solid #ddd;vertical-align:top;max-width:250px;word-wrap:break-word;line-height:1.5;text-align:right;">${notesText}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            <div style="text-align:center;margin-top:12px;padding-top:8px;border-top:1px solid #ddd;font-size:10px;color:#999;">
+                تم إنشاء هذا التقرير بواسطة نظام المتابعة المركزية - عدد المشاريع: ${projects.length}
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+// ---- تقرير شامل (جميع المشاريع) ----
+function renderMultipleProjectsReport(projects) {
+    let html = `
+        <div style="padding:10px;margin:0;background:#fff;">
+            <div style="text-align:center;border-bottom:2px solid #1a1a2e;padding-bottom:10px;margin-bottom:15px;">
+                <h1 style="font-size:20px;font-weight:700;color:#1a1a2e;margin:0;">نظام المتابعة المركزية - تقرير شامل</h1>
+                <div style="font-size:12px;color:#666;margin-top:4px;">${new Date().toLocaleDateString('ar-IQ', {year:'numeric', month:'long', day:'numeric'})}</div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:11px;border:1px solid #ddd;">
+                    <thead>
+                        <tr style="background:#1a1a2e;color:#fff;">
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">#</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">اسم المشروع</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">جهة التكليف</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">الجهة المنفذة</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">فترة الإنجاز</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">تاريخ البدء</th>
+                            <th style="padding:6px 10px;text-align:center;font-weight:600;border:1px solid #333;">الوصف / الملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    projects.forEach((p, index) => {
+        const descs = p.descriptions || [];
+        descs.sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date));
+        
+        let notesText = '';
+        if (descs.length) {
+            notesText = descs.map(d => 
+                `${esc(d.description)}<br><span style="color:#888;font-size:10px;">📅 ${d.entry_date ? new Date(d.entry_date).toLocaleString('ar-IQ') : ''}</span>`
+            ).join('<br><br>');
+        } else {
+            notesText = '<span style="color:#999;font-size:11px;">لا توجد ملاحظات</span>';
+        }
+
+        let period = '-';
+        if (p.start_date && p.completion_date) {
+            const start = new Date(p.start_date);
+            const end = new Date(p.completion_date);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            period = `${diffDays} يوم`;
+        } else if (p.duration_months) {
+            period = `${p.duration_months} شهر`;
+        }
+
+        html += `
+            <tr style="border-bottom:1px solid #ddd;${index % 2 === 0 ? 'background:#fff;' : 'background:#f9f9f9;'}">
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${index + 1}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;font-weight:600;">${esc(p.project_name)}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${esc(p.commissioning_party || '-')}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${esc(p.implementing_party || '-')}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${period}</td>
+                <td style="padding:6px 10px;text-align:center;border:1px solid #ddd;vertical-align:top;">${p.start_date ? p.start_date.slice(0,10) : '-'}</td>
+                <td style="padding:6px 10px;border:1px solid #ddd;vertical-align:top;max-width:250px;word-wrap:break-word;line-height:1.5;text-align:right;">${notesText}</td>
+            </tr>
+        `;
+    });
+
+    html += `
+                    </tbody>
+                </table>
+            </div>
+            <div style="text-align:center;margin-top:12px;padding-top:8px;border-top:1px solid #ddd;font-size:10px;color:#999;">
+                تم إنشاء هذا التقرير بواسطة نظام المتابعة المركزية - عدد المشاريع: ${projects.length}
+            </div>
+        </div>
+    `;
+
+    return html;
+}
+// ---- تبديل تفاصيل التقرير ----
+function toggleDetails(btn) {
+    const details = btn.closest('div').querySelector('.report-details');
+    if (details) {
+        if (details.style.display === 'none' || details.style.display === '') {
+            details.style.display = 'block';
+            btn.textContent = '📋 إخفاء التفاصيل';
+        } else {
+            details.style.display = 'none';
+            btn.textContent = '📋 عرض التفاصيل';
+        }
+    }
+}*/
+// ---- تفاصيل المشروع ----
+/*function toggleDetails(btn) {
+    const item = btn.closest('.report-item');
+    const details = item.querySelector('.report-item-details');
+    details.classList.toggle('expanded');
+    btn.textContent = details.classList.contains('expanded') ? '📋 إخفاء التفاصيل' : '📋 عرض التفاصيل';
+}*/
+
+// ---- إعادة تعيين الفلاتر ----
+function resetFilters() {
+    document.getElementById('reportFilterProjectName').value = '';
+    document.getElementById('reportFilterAssignedUser').value = '';
+    document.getElementById('reportFilterStatus').value = '';
+    document.getElementById('reportFilterDateFrom').value = '';
+    document.getElementById('reportFilterDateTo').value = '';
+    document.getElementById('reportBody').innerHTML = `
+        <div class="no-results">
+            <span class="icon">📋</span>
+            اختر الفلاتر ثم اضغط "عرض التقرير"
+        </div>
+    `;
+    document.getElementById('reportCount').textContent = '0 مشروع';
+    reportData = [];
+}
+
+// ---- مساعدات ----
+function statusBadge(st) {
+    const map = { 'جديد': 'badge-new', 'مستمر': 'badge-ongoing', 'متوقف': 'badge-stopped', 'منجز': 'badge-done' };
+    return `<span class="badge ${map[st] || ''}">${st}</span>`;
+}
+
+function esc(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+let toastTimer;
+
+function showToast(msg, type = 'info') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type}`;
+    t.classList.remove('hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.classList.add('hidden'); }, 3500);
+}
+// ---- طباعة التقرير ----
+function printReport() {
+    window.print();
+}
+
+// ---- تحديث زر الطباعة ----
+function updatePrintButton(hasResults) {
+    const printBtn = document.getElementById('printReportBtn');
+    if (printBtn) {
+        printBtn.style.display = hasResults ? 'inline-flex' : 'none';
+    }
+}
+</script>
+
+</body>
+</html>
