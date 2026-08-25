@@ -1,3 +1,5 @@
+const sql = require('mssql');
+
 const config = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -6,58 +8,29 @@ const config = {
     port: parseInt(process.env.DB_PORT) || 1433,
     options: {
         encrypt: true,
-        trustServerCertificate: true // ضروري جداً لسيرفرات SmarterASP
+        trustServerCertificate: true,
+        connectTimeout: 30000,
+        requestTimeout: 30000
+    },
+    pool: {
+        max: 10,
+        min: 0,
+        idleTimeoutMillis: 30000
     }
-},
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000
-  }
 };
 
-// إدارة حوض الاتصالات لخوادم Serverless (Vercel)
-let poolPromise = null;
-function getPool() {
-  if (!poolPromise) {
-    poolPromise = new sql.ConnectionPool(config).connect();
-  }
-  return poolPromise;
-}
-
-// دالة تنفيذ الاستعلامات العامة
-async function query(queryStr, params = {}) {
-  try {
-    const pool = await getPool();
-    const request = pool.request();
-
-    if (Array.isArray(params)) {
-      params.forEach((val, idx) => {
-        request.input(`param${idx}`, val);
-      });
-    } else if (typeof params === 'object' && params !== null) {
-      for (const [key, val] of Object.entries(params)) {
-        request.input(key, val);
-      }
-    }
-
-    const result = await request.query(queryStr);
-    return result.recordset;
-  } catch (err) {
-    console.error('❌ خطأ استعلام SQL Server:', err.message);
-    throw err;
-  }
-}
-
-// دالة جلب عنصر واحد
-async function queryOne(queryStr, params = {}) {
-  const records = await query(queryStr, params);
-  return records && records.length > 0 ? records[0] : null;
-}
+const poolPromise = new sql.ConnectionPool(config)
+    .connect()
+    .then(pool => {
+        console.log('Connected to MSSQL Database successfully');
+        return pool;
+    })
+    .catch(err => {
+        console.error('Database Connection Failed:', err);
+        throw err;
+    });
 
 module.exports = {
-  sql,
-  getPool,
-  query,
-  queryOne
+    sql,
+    poolPromise
 };
