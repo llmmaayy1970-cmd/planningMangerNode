@@ -30,7 +30,22 @@ const poolPromise = new sql.ConnectionPool(config)
         throw err;
     });
 
+// دالة مساعدة لتنفيذ الاستعلام وإرجاع أول صف فقط
+async function queryOne(queryString, params = {}) {
+    const pool = await poolPromise;
+    const request = pool.request();
+    
+    // ربط البرامترات تلقائياً إن وجدت
+    Object.keys(params).forEach(key => {
+        request.input(key, params[key]);
+    });
+
+    const result = await request.query(queryString);
+    return result.recordset[0] || null; // إرجاع الصف الأول أو null
+}
+
 module.exports = {
     sql,
-    poolPromise
+    poolPromise,
+    queryOne // <-- تأكد من إضافة queryOne للتصدير
 };
