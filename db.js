@@ -1,17 +1,14 @@
-const sql = require('mssql');
-require('dotenv').config();
-
-// إعدادات الاتصال بـ SQL Server السحابية
 const config = {
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  server: process.env.DB_HOST, // مثال: myserver.database.windows.net
-  port: parseInt(process.env.DB_PORT) || 1433,
-  database: process.env.DB_NAME,
-  options: {
-    encrypt: true, // إجباري لاتصالات السحاب (Azure/AWS)
-    trustServerCertificate: true // للتوافق مع الشهادات الذاتية
-  },
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    port: parseInt(process.env.DB_PORT) || 1433,
+    options: {
+        encrypt: true,
+        trustServerCertificate: true // ضروري جداً لسيرفرات SmarterASP
+    }
+},
   pool: {
     max: 10,
     min: 0,
