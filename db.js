@@ -1,36 +1,30 @@
-const mysql = require('mysql2/promise');
+const sql = require('mssql');
 require('dotenv').config();
 
-// إنشاء حوض اتصالات (Pool) يتوافق مع Aiven وVercel
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 14775,
+const config = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
+  server: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT) || 1433,
   database: process.env.DB_NAME,
-  ssl: {
-    rejectUnauthorized: false // إجباري لاتصال Aiven الآمن
-  },
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-// دالة تنفيذ الاستعلامات
-async function query(sqlText, params = []) {
-  try {
-    const [rows] = await pool.execute(sqlText, Array.isArray(params) ? params : Object.values(params));
-    return { recordset: rows };
-  } catch (err) {
-    console.error('❌ خطأ في الاستعلام:', err.message);
-    throw err;
+  options: {
+    encrypt: true, // إجباري للسيرفرات السحابية (مثل Azure أو Aiven)
+    trustServerCertificate: true
   }
+};
+
+const poolPromise = new sql.ConnectionPool(config)
+  .connect()
+  .then(pool => pool)
+  .catch(err => console.error('❌ خطأ اتصال MSSQL:', err));
+
+async function query(queryStr, params = {}) {
+  const pool = await poolPromise;
+  const request = pool.request();
+  for (const [key, val] of Object.entries(params)) {
+    request.input(key, val);
+  }
+  return request.query(queryStr);
 }
 
-// دالة جلب عنصر واحد
-async function queryOne(sqlText, params = []) {
-  const result = await query(sqlText, params);
-  return result.recordset[0] || null;
-}
-
-module.exports = { pool, query, queryOne };
+module.exports = { sql, poolPromise, query };
